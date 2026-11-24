@@ -1,0 +1,6 @@
+{
+  "vuelos": [
+    { "codigo": "AL-204", "origen": "Guayaquil", "destino": "Quito", "fecha": "2026-12-20", "hora": "07:30" },
+    { "codigo": "AL-310", "origen": "Quito", "destino": "Cuenca", "fecha": "2026-12-22", "hora": "15:10" }
+  ]
+}

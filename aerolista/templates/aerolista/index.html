@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Django entrega este token; el JavaScript lo envía en cada POST, PUT y DELETE -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>AeroLista ✈ Reservación de vuelos</title>
+  <!-- Bootstrap 5 (necesita internet) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Nuestros estilos (los asientos y el avión) -->
+  <link rel="stylesheet" href="{% static 'aerolista/css/estilos.css' %}">
+</head>
+<body class="bg-light">
+
+  <!-- ========== BARRA SUPERIOR ========== -->
+  <nav class="navbar navbar-dark bg-primary mb-3">
+    <div class="container">
+      <span class="navbar-brand mb-0 h1">✈ AeroLista · Reservación de vuelos</span>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Aquí aparecen los mensajes (éxito o error) -->
+    <div id="mensajes"></div>
+
+    <div class="row g-3">
+
+      <!-- ========== COLUMNA IZQUIERDA: vuelo y avión ========== -->
+      <div class="col-lg-7">
+
+        <!-- Información del vuelo -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-sm-5">
+                <label for="selector-vuelo" class="form-label fw-semibold">Vuelo</label>
+                <select id="selector-vuelo" class="form-select">
+                  {% for v in vuelos %}
+                  <option value="{{ v.codigo }}">{{ v.codigo }} · {{ v.origen }} → {{ v.destino }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-sm-7 text-sm-end">
+                <button class="btn btn-outline-primary btn-sm" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#form-vuelo">＋ Registrar vuelo</button>
+              </div>
+            </div>
+
+            <!-- Datos principales del vuelo seleccionado -->
+            <div id="info-vuelo" class="mt-3"></div>
+
+            <!-- Registrar un vuelo nuevo -->
+            <div class="collapse mt-3" id="form-vuelo">
+              <div class="border rounded p-3 bg-white">
+                <h6>Registrar vuelo</h6>
+                <div class="row g-2">
+                  <div class="col-6 col-md-4"><input id="v-codigo" class="form-control" placeholder="Código (AL-450)"></div>
+                  <div class="col-6 col-md-4"><input id="v-origen" class="form-control" placeholder="Origen"></div>
+                  <div class="col-6 col-md-4"><input id="v-destino" class="form-control" placeholder="Destino"></div>
+                  <div class="col-6 col-md-4"><input id="v-fecha" type="date" class="form-control"></div>
+                  <div class="col-6 col-md-4"><input id="v-hora" type="time" class="form-control"></div>
+                  <div class="col-12 col-md-4 d-grid"><button id="btn-registrar-vuelo" class="btn btn-primary">Guardar vuelo</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Avión con los 68 asientos -->
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+              <h5 class="mb-0">Asientos</h5>
+              <div id="tablero" class="small text-muted"></div>
+            </div>
+            <div class="leyenda mb-3">
+              <span><i class="muestra libre"></i> Libre</span>
+              <span><i class="muestra seleccionado"></i> Seleccionado</span>
+              <span><i class="muestra reservado"></i> Reservado</span>
+            </div>
+            <div id="avion" class="avion"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== COLUMNA DERECHA: reservaciones ========== -->
+      <div class="col-lg-5">
+        <div class="card">
+          <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-reservar" type="button">Reservar</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-buscar" type="button">Buscar</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-modificar" type="button">Modificar</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-listar" type="button">Listar</button></li>
+            </ul>
+          </div>
+          <div class="card-body tab-content">
+
+            <!-- Pestaña 1: crear reservación -->
+            <div class="tab-pane fade show active" id="tab-reservar">
+              <p class="text-muted small">① Clic en un asiento verde · ② llena los datos · ③ reserva.</p>
+              <div class="mb-2"><label class="form-label">Asiento</label>
+                <input id="res-asiento" class="form-control" readonly placeholder="Elige uno en el avión"></div>
+              <div class="mb-2"><label class="form-label">Nombre</label>
+                <input id="res-nombre" class="form-control" placeholder="Ej: Carla Mendoza"></div>
+              <div class="row g-2 mb-3">
+                <div class="col-8"><label class="form-label">Cédula</label>
+                  <input id="res-cedula" class="form-control" maxlength="10" placeholder="10 dígitos"></div>
+                <div class="col-4"><label class="form-label">Edad</label>
+                  <input id="res-edad" type="number" min="0" max="120" class="form-control" placeholder="25"></div>
+              </div>
+              <div class="d-grid"><button id="btn-reservar" class="btn btn-primary">✈ Reservar asiento</button></div>
+            </div>
+
+            <!-- Pestaña 2: buscar -->
+            <div class="tab-pane fade" id="tab-buscar">
+              <div class="row g-2 mb-3">
+                <div class="col-5">
+                  <select id="bus-tipo" class="form-select">
+                    <option value="numero">N.º de reserva</option>
+                    <option value="asiento">Asiento</option>
+                    <option value="cedula">Cédula</option>
+                  </select>
+                </div>
+                <div class="col-7 d-flex gap-2">
+                  <input id="bus-valor" class="form-control" placeholder="Ej: 1002">
+                  <button id="btn-buscar" class="btn btn-primary">Buscar</button>
+                </div>
+              </div>
+              <div id="resultado-busqueda"></div>
+            </div>
+
+            <!-- Pestaña 3: modificar o cancelar -->
+            <div class="tab-pane fade" id="tab-modificar">
+              <div class="d-flex gap-2 mb-3">
+                <input id="mod-numero" type="number" class="form-control" placeholder="N.º de reserva">
+                <button id="btn-cargar" class="btn btn-outline-primary">Cargar</button>
+              </div>
+              <div id="form-modificar" class="d-none">
+                <div class="mb-2"><label class="form-label">Nombre</label><input id="mod-nombre" class="form-control"></div>
+                <div class="row g-2 mb-2">
+                  <div class="col-4"><label class="form-label">Edad</label><input id="mod-edad" type="number" class="form-control"></div>
+                  <div class="col-8"><label class="form-label">Asiento (clic en un asiento verde para cambiarlo)</label>
+                    <input id="mod-asiento" class="form-control" readonly></div>
+                </div>
+                <div class="form-text mb-3">La cédula no se puede cambiar.</div>
+                <div class="d-grid gap-2">
+                  <button id="btn-guardar-cambios" class="btn btn-primary">Guardar cambios</button>
+                  <button id="btn-cancelar-reserva" class="btn btn-outline-danger">Cancelar esta reservación</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pestaña 4: listar -->
+            <div class="tab-pane fade" id="tab-listar">
+              <div class="btn-group btn-group-sm mb-3">
+                <button class="btn btn-outline-secondary filtro active" data-clase="">Todos</button>
+                <button class="btn btn-outline-secondary filtro" data-clase="Ejecutiva">Ejecutiva</button>
+                <button class="btn btn-outline-secondary filtro" data-clase="Económica">Económica</button>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm table-striped align-middle">
+                  <thead><tr><th>N.º</th><th>Nombre</th><th>Cédula</th><th>Edad</th><th>Asiento</th></tr></thead>
+                  <tbody id="tabla-pasajeros"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'aerolista/js/app.js' %}"></script>
+</body>
+</html>
